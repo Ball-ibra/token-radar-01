@@ -1,14 +1,17 @@
-// A working token-radar-01 entry (Node 22, standard library only).
+// Token Radar radar-2 entry (Node 22, standard library only).
 //
 // The program reads the sealed snapshot from /input/snapshot.json (or --input <file|dir>), scores every
-// pre-token protocol with the model in lib/model.ts, writes the ranked board to /output/board.json, and
-// copies this repository's dashboard/ and screenshots/ to /output. Last, it writes /output/dossier.json,
-// the summary the judge reads, with the vendored make.fun library.
+// pre-token protocol with the radar-2 model in lib/model.ts, writes the ranked board to
+// /output/board.json, and copies this repository's dashboard/ and screenshots/ to /output. Last, it
+// writes /output/dossier.json, the summary the judge reads, with the vendored make.fun library.
+//
+// radar-2 prices each protocol from the snapshot's own live-token evidence: the median
+// market-cap/TVL of live-token peers in the same category, adjusted for 7-day TVL growth,
+// for how long the protocol has run with no token, and for how many chains it spans.
+// No protocol name is hard-coded into the price; the snapshot is the only input.
 //
 // The dashboard is a static page, no framework and no network: dashboard/index.html, dashboard/app.css
-// and dashboard/app.js read /output/data.js, which this program writes from the same board. A starting
-// point, not a winner: it covers the watchlist, states the model and gives every protocol a farm plan.
-// Change the model, the page or the plan; keep the gate's shape.
+// and dashboard/app.js read /output/data.js, which this program writes from the same board.
 //
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts --input ../input/snapshot.json
@@ -48,6 +51,14 @@ const issue = boardIssue(board, snapshot);
 if (issue !== null) {
   process.stderr.write(`token radar: the model wrote a board the gate refuses: ${issue}\n`);
   process.exit(1);
+}
+
+// The board must be ranked by implied value, rank 1 first; refuse to hand in a board that is not.
+for (let i = 1; i < board.length; i++) {
+  if (board[i]!.implied_value_usd > board[i - 1]!.implied_value_usd) {
+    process.stderr.write(`token radar: board is not sorted by implied value at rank ${board[i]!.rank}\n`);
+    process.exit(1);
+  }
 }
 
 mkdirSync(out, { recursive: true });
